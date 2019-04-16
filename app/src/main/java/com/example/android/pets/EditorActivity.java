@@ -16,6 +16,7 @@
 package com.example.android.pets;
 
 import android.content.ContentValues;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
@@ -68,6 +69,14 @@ public class EditorActivity extends AppCompatActivity {
         mGenderSpinner = (Spinner) findViewById(R.id.spinner_gender);
 
         setupSpinner();
+
+        Intent intent = getIntent();
+        if( intent.getData() == null){
+            // Add a new pet
+            setTitle("Add a pet");
+        }else{
+            setTitle("Edit a pet");
+        }
     }
 
     /**
