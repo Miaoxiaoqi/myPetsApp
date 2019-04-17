@@ -86,11 +86,11 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
             setTitle("Add a pet");
         }else{
             setTitle("Edit a pet");
+
+            // initialize cursor loader
+            getLoaderManager().initLoader(PET_LOADER,null,this);
+
         }
-
-        // initialize cursor loader
-        getLoaderManager().initLoader(PET_LOADER,null,this);
-
     }
 
     /**
@@ -135,13 +135,18 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
     /**
      * Get user input from editor and save new pet into database.
      */
-    private void insertPet() {
+    private void updatePet() {
         // Read from input fields
         // Use trim to eliminate leading or trailing white space
         String nameString = mNameEditText.getText().toString().trim();
         String breedString = mBreedEditText.getText().toString().trim();
         String weightString = mWeightEditText.getText().toString().trim();
-        int weight = Integer.parseInt(weightString);
+
+        // if weight edit is empty, we set it to zero
+        int weight = 0;
+        if(!TextUtils.isEmpty(weightString)){
+            Integer.parseInt(weightString);
+        }
 
         // Create a ContentValues object where column names are the keys,
         // and pet attributes from the editor are the values.
@@ -151,19 +156,45 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
         values.put(PetEntry.COLUMN_PET_GENDER, mGender);
         values.put(PetEntry.COLUMN_PET_WEIGHT, weight);
 
-        // Insert a new pet into the provider, returning the content URI for the new pet.
-        Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
+        if(mCurrentPetUri == null){
 
-        // Show a toast message depending on whether or not the insertion was successful
-        if (newUri == null) {
-            // If the new content URI is null, then there was an error with insertion.
-            Toast.makeText(this, getString(R.string.editor_insert_pet_failed),
-                    Toast.LENGTH_SHORT).show();
-        } else {
-            // Otherwise, the insertion was successful and we can display a toast.
-            Toast.makeText(this, getString(R.string.editor_insert_pet_successful),
-                    Toast.LENGTH_SHORT).show();
+            // if all fields are empty, finish the activity, don't create a new pet
+            if(     TextUtils.isEmpty(nameString)
+                    && TextUtils.isEmpty(breedString)
+                    && TextUtils.isEmpty(weightString)
+                    && mGender == PetEntry.GENDER_UNKNOWN){
+                return;
+            }
+
+            // Insert a new pet into the provider, returning the content URI for the new pet.
+            Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
+
+            // Show a toast message depending on whether or not the insertion was successful
+            if (newUri == null) {
+                // If the new content URI is null, then there was an error with insertion.
+                Toast.makeText(this, getString(R.string.editor_insert_pet_failed),
+                        Toast.LENGTH_SHORT).show();
+            } else {
+                // Otherwise, the insertion was successful and we can display a toast.
+                Toast.makeText(this, getString(R.string.editor_insert_pet_successful),
+                        Toast.LENGTH_SHORT).show();
+            }
+        }else{
+            // Edit a exist pet into the provider, returning the content URI for the new pet.
+            int rowUpdated = getContentResolver().update(mCurrentPetUri,values,null,null);
+
+            // Show a toast message depending on whether or not the update was successful
+            if(rowUpdated == 0){
+                // If the new content URI is null, then there was an error with update
+                Toast.makeText(this, getString(R.string.editor_update_pet_failed),
+                        Toast.LENGTH_SHORT).show();
+            } else {
+                // Otherwise, the insertion was successful and we can display a toast.
+                Toast.makeText(this, getString(R.string.editor_update_pet_successful),
+                        Toast.LENGTH_SHORT).show();
+            }
         }
+
     }
 
     @Override
@@ -181,7 +212,7 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
             // Respond to a click on the "Save" menu option
             case R.id.action_save:
                 // Save pet to database
-                insertPet();
+                updatePet();
                 // Exit activity
                 finish();
                 return true;
@@ -232,14 +263,22 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
             mBreedEditText.setText(cursor.getString(breedColumn));
             mWeightEditText.setText(cursor.getString(weightColumn));
 
-            // set gender spinner's position
-            int position = cursor.getInt(genderColumn);
+            // set gender
+            int gender = cursor.getInt(genderColumn);
 
-            if((position != PetEntry.GENDER_MALE) && (position != PetEntry.GENDER_FEMALE)){
-                position = PetEntry.GENDER_UNKNOWN;
+            switch (gender) {
+                case PetEntry.GENDER_MALE:
+                    mGenderSpinner.setSelection(1);
+                    break;
+                case PetEntry.GENDER_FEMALE:
+                    mGenderSpinner.setSelection(2);
+                    break;
+                default:
+                    mGenderSpinner.setSelection(0);
+                    break;
             }
 
-            mGenderSpinner.setSelection(position);
+            mGenderSpinner.setSelection(gender);
         }
     }
 
